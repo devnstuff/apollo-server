@@ -13,7 +13,7 @@ connectDB();
 const app = express();
 
 const corsOptions = {
-    origin: 'https://studio.apollographql.com',
+    origin: '*',
     credentials: true
 }
 
