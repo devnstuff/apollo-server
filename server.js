@@ -1,4 +1,5 @@
-const { ApolloServer } = require('apollo-server');
+const express = require('express');
+const { ApolloServer } = require('apollo-server-express');
 const connectDB = require('./config/db');
 const jwt = require('jsonwebtoken');
 const dotenv = require('dotenv');
@@ -9,11 +10,14 @@ const resolvers = require('./graphql/resolvers');
 dotenv.config();
 connectDB();
 
+const app = express();
+
+const corsOptions = {
+    origin: 'http://localhost:8080',
+    credentials: true
+}
+
 const server = new ApolloServer({
-    cors: {
-        origin: 'http://localhost:8080/',
-        credentials: true
-    },
     typeDefs,
     resolvers,
     context: ({ req }) => {
@@ -28,6 +32,8 @@ const server = new ApolloServer({
       },
 });
 
-server.listen({ port: process.env.PORT || 4000 }).then(({ url }) => {
-    console.log(`🚀 Server is up and running in ${process.env.ENV} mode on URL: ${url}`);
+server.applyMiddleware({ app, cors: corsOptions });
+
+app.listen(process.env.PORT || 5000, () => {
+    console.log(`🚀 Server is up and running in ${process.env.ENV} mode on PORT:${process.env.PORT}`);
 });

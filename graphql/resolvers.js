@@ -2,7 +2,7 @@ const User = require('../mongoDB/models/user');
 const CV = require('../mongoDB/models/cv');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { AuthenticationError } = require('apollo-server');
+const { AuthenticationError } = require('apollo-server-express');
 require('dotenv').config();
 
 module.exports = {
