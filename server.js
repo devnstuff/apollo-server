@@ -30,6 +30,8 @@ const server = new ApolloServer({
         reportSchema: true,
         variant: "current"
       },
+    introspection: true,
+    playground: true
 });
 
 server.applyMiddleware({ app, cors: corsOptions });
