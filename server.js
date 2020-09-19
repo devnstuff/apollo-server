@@ -11,7 +11,7 @@ connectDB();
 
 const server = new ApolloServer({
     cors: {
-        origin: '*',
+        origin: 'http://localhost:8080/',
         credentials: true
     },
     typeDefs,
@@ -21,7 +21,11 @@ const server = new ApolloServer({
                 
         if (token) return { userID, email } = jwt.verify(token.split(' ')[1], process.env.SECRET);
         return null;
-    }
+    },
+    engine: {    
+        reportSchema: true,
+        variant: "current"
+      },
 });
 
 server.listen({ port: process.env.PORT || 4000 }).then(({ url }) => {
