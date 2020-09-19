@@ -1,5 +1,5 @@
 const User = require('../mongoDB/models/user');
-const Post = require('../mongoDB/models/post');
+const CV = require('../mongoDB/models/cv');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { AuthenticationError } = require('apollo-server');
@@ -32,7 +32,7 @@ module.exports = {
         currentUser: async (_, {}, context) => {
 
             if(!context.userID) {
-                const error = new Error('User not found');
+                const error = new AuthenticationError('User not found');
                 throw error;
             }
 
@@ -41,15 +41,27 @@ module.exports = {
             return currentUser;
 
         },
-        posts: async (_, {}, context) => {
-            if (!context.userID) {
-                const error = new AuthenticationError('Unauthorized');
-                throw error
+        cvs: async (_, {}, context) => {
+
+            if(!context.userID) {
+                const error = new AuthenticationError('User not found');
+                throw error;
             }
 
-            const posts = await Post.find({ author: context.userID });
+            const cvs = await CV.find({ author: context.userID });
 
-            return posts;
+            return cvs;
+        },
+        cv: async (_, { id }, context) => {
+
+            if(!context.userID) {
+                const error = new Error('User not found');
+                throw error;
+            }
+
+            const cv = await CV.findOne({ _id: id });
+
+            return cv;
         }
     },
     Mutation: {
@@ -78,28 +90,46 @@ module.exports = {
                _id: createdUser._id.toString()
            };
         },
-        createPost: async (_, { input }, context) => {
-            const { title, content } = input;
+        createCV: async (_, { input }, context) => {
+            const { title, summary, personalDetails, employmentHistory, education, social, skills, courses, internships, languages, hobbies } = input;
 
             if(!context.userID) {
                 const error = new AuthenticationError('Unauthorized');
                 throw error;
             }
 
-            const post = new Post({
+            const cv = new CV({
                 title,
-                content,
+                summary,
+                personalDetails,
+                employmentHistory,
+                education,
+                social,
+                skills,
+                courses,
+                internships,
+                languages,
+                hobbies,
                 author: context.userID
             });
 
-            const createdPost = await post.save();
-
+            const createdCV = await cv.save();
 
             return {
-                ...createdPost._doc,
-                _id: createdPost._id.toString(),
-                createdAt: createdPost.createdAt.toISOString(),
+                ...createdCV._doc,
+                _id: createdCV._id.toString(),
             }
-        }
+        },
+        updateCV: async (_, { input, id }, context) => {
+
+            if(!context.userID) {
+                const error = new AuthenticationError('Unauthorized');
+                throw error;
+            }
+
+            const cv = await CV.findOneAndUpdate({ _id: id }, { ...input }, { new: true });
+
+            return cv;
+        },
     }
 }
