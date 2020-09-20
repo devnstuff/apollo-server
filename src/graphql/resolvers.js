@@ -1,6 +1,6 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { AuthenticationError } = require('apollo-server-express');
+const { ApolloError } = require('apollo-server');
 const User = require('../mongoDB/models/user');
 const CV = require('../mongoDB/models/cv');
 require('dotenv').config();
@@ -11,14 +11,14 @@ module.exports = {
             const user = await User.findOne({ email });
 
             if (!user) {
-                const error = new AuthenticationError('Invalid credentials');
+                const error = new ApolloError('Invalid credentials');
                 throw error;
             }
 
             const isEqual = await bcrypt.compare(password, user.password);
 
             if (!isEqual) {
-                const error = new AuthenticationError('Invalid credentials');
+                const error = new ApolloError('Invalid credentials');
                 throw error;
             }
 
@@ -32,7 +32,7 @@ module.exports = {
         currentUser: async (_, {}, context) => {
 
             if(!context.userID) {
-                const error = new AuthenticationError('User not found');
+                const error = new ApolloError('User not found');
                 throw error;
             }
 
@@ -44,7 +44,7 @@ module.exports = {
         cvs: async (_, {}, context) => {
 
             if(!context.userID) {
-                const error = new AuthenticationError('User not found');
+                const error = new ApolloError('User not found');
                 throw error;
             }
 
@@ -55,7 +55,7 @@ module.exports = {
         cv: async (_, { id }, context) => {
 
             if(!context.userID) {
-                const error = new Error('User not found');
+                const error = new ApolloError('User not found');
                 throw error;
             }
 
@@ -71,7 +71,7 @@ module.exports = {
             const existingUser = await User.findOne({ email });
 
             if (existingUser) {
-                const error = new Error('User already exists');
+                const error = new ApolloError('User already exists');
                 throw error;
             }
 
@@ -94,7 +94,7 @@ module.exports = {
             const { title, summary, personalDetails, employmentHistory, education, social, skills, courses, internships, languages, hobbies } = input;
 
             if(!context.userID) {
-                const error = new AuthenticationError('Unauthorized');
+                const error = new ApolloError('Unauthorized');
                 throw error;
             }
 
@@ -123,7 +123,7 @@ module.exports = {
         updateCV: async (_, { input, id }, context) => {
 
             if(!context.userID) {
-                const error = new AuthenticationError('Unauthorized');
+                const error = new ApolloError('Unauthorized');
                 throw error;
             }
 
