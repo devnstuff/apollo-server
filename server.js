@@ -39,5 +39,5 @@ const PORT = process.env.PORT || 5000;
 server.applyMiddleware({ app, cors: corsOptions });
 
 app.listen(PORT, () => {
-    console.log(`🚀 Server is up and running in ${process.env.ENV} mode on PORT:${process.env.PORT}`);
+    console.log(`Server is running on PORT: ${PORT}`);
 });
