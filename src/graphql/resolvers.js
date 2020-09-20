@@ -1,8 +1,8 @@
-const User = require('../mongoDB/models/user');
-const CV = require('../mongoDB/models/cv');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { AuthenticationError } = require('apollo-server-express');
+const User = require('../mongoDB/models/user');
+const CV = require('../mongoDB/models/cv');
 require('dotenv').config();
 
 module.exports = {
