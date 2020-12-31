@@ -1,135 +1,130 @@
+const { ApolloError } = require('apollo-server-express');
 const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-const { ApolloError } = require('apollo-server');
+const { sign } = require('jsonwebtoken');
 const User = require('../mongoDB/models/user');
-const CV = require('../mongoDB/models/cv');
-require('dotenv').config();
+
+const {
+  ACCESS_TOKEN_SECRET,
+  REFRESH_TOKEN_SECRET,
+} = require('../config/constants');
 
 module.exports = {
-    Query: {
-        login: async (_, { email, password }) => {
-            const user = await User.findOne({ email });
+  Query: {
+    currentUser: async (_, __, { req }) => {
+      if (!req.userID) {
+        const error = new ApolloError('Token expired, please sign in again');
+        throw error;
+      }
 
-            if (!user) {
-                const error = new ApolloError('Invalid credentials');
-                throw error;
-            }
+      const currentUser = await User.findOne({ _id: req.userID });
 
-            const isEqual = await bcrypt.compare(password, user.password);
-
-            if (!isEqual) {
-                const error = new ApolloError('Invalid credentials');
-                throw error;
-            }
-
-            const token = jwt.sign({
-                userID: user._id,
-                email: user.email
-            }, process.env.SECRET, { expiresIn: '1h' });
-
-            return { token, userID: user._id.toString() }
-        },
-        currentUser: async (_, {}, context) => {
-
-            if(!context.userID) {
-                const error = new ApolloError('User not found');
-                throw error;
-            }
-
-            const currentUser = await User.findOne({ _id: context.userID });
-
-            return currentUser;
-
-        },
-        cvs: async (_, {}, context) => {
-
-            if(!context.userID) {
-                const error = new ApolloError('User not found');
-                throw error;
-            }
-
-            const cvs = await CV.find({ author: context.userID });
-
-            return cvs;
-        },
-        cv: async (_, { id }, context) => {
-
-            if(!context.userID) {
-                const error = new ApolloError('User not found');
-                throw error;
-            }
-
-            const cv = await CV.findOne({ _id: id });
-
-            return cv;
-        }
+      return currentUser;
     },
-    Mutation: {
-        registration: async (_, { input }) => {
-            const { email, password, name } = input;
+  },
+  Mutation: {
+    registration: async (_, { input }) => {
+      const { email, password, name } = input;
 
-            const existingUser = await User.findOne({ email });
+      const existingUser = await User.findOne({ email });
 
-            if (existingUser) {
-                const error = new ApolloError('User already exists');
-                throw error;
-            }
+      if (existingUser) {
+        const error = new ApolloError('User already exists');
+        throw error;
+      }
 
-           const hashedPW = await bcrypt.hash(password, 12);
+      const hashedPW = await bcrypt.hash(password, 12);
 
-           const user = new User({
-               email,
-               name,
-               password: hashedPW,
-               status: 'Active'
-           });
-           const createdUser = await user.save();
+      const user = new User({
+        email,
+        name,
+        password: hashedPW,
+        status: 'Active',
+      });
+      const createdUser = await user.save();
 
-           return {
-               ...createdUser._doc, 
-               _id: createdUser._id.toString()
-           };
+      return {
+        ...createdUser._doc,
+        _id: createdUser._id.toString(),
+      };
+    },
+    login: async (_, { email, password }, { res }) => {
+      const user = await User.findOne({ email });
+
+      if (!user) {
+        const error = new ApolloError('Invalid credentials');
+        throw error;
+      }
+
+      const isEqual = await bcrypt.compare(password, user.password);
+
+      if (!isEqual) {
+        const error = new ApolloError('Invalid credentials');
+        throw error;
+      }
+
+      const token = sign(
+        {
+          userID: user._id,
         },
-        createCV: async (_, { input }, context) => {
-            const { title, summary, personalDetails, employmentHistory, education, social, skills, courses, internships, languages, hobbies } = input;
+        ACCESS_TOKEN_SECRET,
+        { expiresIn: '1h' }
+      );
 
-            if(!context.userID) {
-                const error = new ApolloError('Unauthorized');
-                throw error;
-            }
-
-            const cv = new CV({
-                title,
-                summary,
-                personalDetails,
-                employmentHistory,
-                education,
-                social,
-                skills,
-                courses,
-                internships,
-                languages,
-                hobbies,
-                author: context.userID
-            });
-
-            const createdCV = await cv.save();
-
-            return {
-                ...createdCV._doc,
-                _id: createdCV._id.toString(),
-            }
+      const refreshToken = sign(
+        {
+          userID: user._id,
+          count: user.count,
         },
-        updateCV: async (_, { input, id }, context) => {
+        REFRESH_TOKEN_SECRET,
+        { expiresIn: '7d' }
+      );
 
-            if(!context.userID) {
-                const error = new ApolloError('Unauthorized');
-                throw error;
-            }
+      res.cookie('access_token', token);
+      res.cookie('refresh_token', refreshToken);
 
-            const cv = await CV.findOneAndUpdate({ _id: id }, { ...input }, { new: true });
+      return user;
+    },
+    changePassword: async (_, { oldPassword, newPassword }, { req }) => {
+      if (!req.userID) {
+        return false;
+      }
 
-            return cv;
-        },
-    }
-}
+      const user = await User.findOne({ _id: req.userID });
+
+      const isEqual = await bcrypt.compare(oldPassword, user.password);
+
+      if (oldPassword === newPassword) {
+        const error = new ApolloError(
+          'New password should not be the same as the old one'
+        );
+        throw error;
+      }
+
+      if (!isEqual) {
+        const error = new ApolloError('Incorrect password');
+        throw error;
+      }
+
+      const hashedPW = await bcrypt.hash(newPassword, 12);
+      user.password = hashedPW;
+      await user.save();
+
+      return true;
+    },
+    invalidateTokens: async (_, __, { req }) => {
+      if (!req.userID) {
+        return false;
+      }
+
+      const user = await User.findOne({ _id: req.userID });
+      if (!user) {
+        return false;
+      }
+
+      user.count += 1;
+      await user.save();
+
+      return true;
+    },
+  },
+};

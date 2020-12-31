@@ -1,13 +1,13 @@
 const mongoose = require('mongoose');
-require('dotenv').config();
+const { MONGO_URI } = require('./constants');
 
 const connectDB = async () => {
   try {
-    const connect = await mongoose.connect(process.env.MONGO_URI, {
+    const connect = await mongoose.connect(MONGO_URI, {
       useNewUrlParser: true,
       useCreateIndex: true,
       useUnifiedTopology: true,
-      useFindAndModify: false
+      useFindAndModify: false,
     });
 
     console.log(`MongoDB connected: ${connect.connection.host}`.rainbow);
@@ -15,6 +15,6 @@ const connectDB = async () => {
     console.log(`Error: ${err.message}`.red.bold);
     process.exit(1);
   }
-}
+};
 
-module.exports = connectDB
+module.exports = connectDB;
